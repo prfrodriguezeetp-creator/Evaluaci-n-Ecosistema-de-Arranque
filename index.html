@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Evaluación Técnica - Firmware y Diagnóstico</title>
+    <style>
+        /* ===== RESET & BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+            background: linear-gradient(135deg, #fce4ec 0%, #fff3e0 50%, #e0f2f1 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.8rem;
+            margin: 0;
+        }
+
+        /* ===== WRAPPER PRINCIPAL ===== */
+        .quiz-wrapper {
+            max-width: 1100px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(4px);
+            border-radius: 2.5rem;
+            box-shadow: 0 30px 45px -15px rgba(0, 0, 0, 0.3);
+            padding: 2rem 2.2rem;
+            transition: padding 0.2s;
+        }
+
+        /* ===== PANTALLA DE BIENVENIDA ===== */
+        #welcomeScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 50vh;
+            gap: 1.2rem;
+        }
+
+        #welcomeScreen h1 {
+            font-size: 2.8rem;
+            background: linear-gradient(135deg, #1e6f9f, #e67e22);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+            font-weight: 900;
+        }
+
+        #welcomeScreen .subtitle {
+            font-size: 1.3rem;
+            color: #2c3e66;
+            font-weight: 600;
+            max-width: 600px;
+        }
+
+        #welcomeScreen .instructions {
+            font-size: 1rem;
+            color: #4a5a7a;
+            background: #f0f4fa;
+            padding: 1.5rem 2rem;
+            border-radius: 1.8rem;
+            max-width: 650px;
+            text-align: left;
+            line-height: 1.6;
+            border-left: 6px solid #e67e22;
+        }
+
+        #welcomeScreen .instructions strong {
+            color: #1e6f9f;
+        }
+
+        .btn-start {
+            background: #e67e22;
+            border: none;
+            color: white;
+            font-weight: 900;
+            font-size: 1.8rem;
+            padding: 1rem 3.5rem;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(230, 126, 34, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            letter-spacing: 1px;
+        }
+
+        .btn-start:hover {
+            transform: scale(1.04);
+            box-shadow: 0 12px 28px rgba(230, 126, 34, 0.6);
+        }
+
+        /* ===== ÁREA DE PREGUNTAS (inicialmente oculta) ===== */
+        #quizArea {
+            display: none;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .progress-area {
+            background: #e6e0f0;
+            border-radius: 2rem;
+            padding: 0.6rem 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-weight: 700;
+            color: #1a4a6e;
+        }
+
+        .question-counter {
+            background: #ffcc88;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            color: #5a3a1a;
+            font-size: 0.9rem;
+        }
+
+        .score-badge {
+            background: #88ccaa;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            color: #1a4a2e;
+            font-size: 0.9rem;
+        }
+
+        /* ===== TARJETA DE PREGUNTA ===== */
+        .question-card {
+            background: #ffffff;
+            border-radius: 1.8rem;
+            padding: 1.6rem 1.8rem;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+            border-left: 8px solid #ff8c42;
+            border-right: 1px solid #f0e0d0;
+            margin-bottom: 0.5rem;
+        }
+
+        .question-text {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #1f2a4a;
+            margin-bottom: 1.4rem;
+            line-height: 1.5;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem 1.2rem;
+            border-radius: 1.2rem;
+            background: #fefaf5;
+            border: 2px solid #e0d0c0;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, transform 0.1s;
+        }
+
+        .option:hover {
+            background: #fff4e6;
+            border-color: #ffaa66;
+        }
+
+        /* --- ESTILO DE SELECCIÓN DE ALTA VISIBILIDAD --- */
+        .option.selected {
+            background: #1e6f9f !important;
+            border-color: #0d4a6e !important;
+            transform: scale(1.02);
+        }
+
+        .option.selected label {
+            color: #ffffff !important;
+            font-weight: 700;
+        }
+
+        .option.selected input[type="radio"] {
+            border-color: #ffffff;
+            background-color: #ffffff;
+            box-shadow: inset 0 0 0 3px #1e6f9f;
+        }
+
+        .option input[type="radio"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.4rem;
+            height: 1.4rem;
+            border: 2px solid #e67e22;
+            border-radius: 50%;
+            cursor: pointer;
+            background: white;
+            flex-shrink: 0;
+        }
+
+        .option input[type="radio"]:checked {
+            background-color: #e67e22;
+            border-color: #e67e22;
+            box-shadow: inset 0 0 0 3px white;
+        }
+
+        .option label {
+            flex: 1;
+            font-size: 1rem;
+            line-height: 1.4;
+            cursor: pointer;
+            color: #2c3e66;
+            font-weight: 600;
+        }
+
+        /* ===== NAVEGACIÓN ===== */
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn {
+            border: none;
+            font-weight: 800;
+            padding: 0.7rem 1.8rem;
+            border-radius: 60px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .btn-primary {
+            background: #3a86ff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2a6ad0;
+            transform: scale(1.02);
+        }
+
+        .btn-secondary {
+            background: #e67e22;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #d46a10;
+        }
+
+        .btn-success {
+            background: #44aa66;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #338855;
+        }
+
+        .btn-danger {
+            background: #cc6644;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #aa4422;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #1e6f9f;
+            color: #1e6f9f;
+        }
+        .btn-outline:hover {
+            background: #1e6f9f;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* ===== PANEL DE RESULTADOS (corrección) ===== */
+        #resultsPanel {
+            display: none;
+            margin-top: 1.5rem;
+            background: #fff2e0;
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            border: 2px solid #ffaa33;
+        }
+
+        #resultsPanel h3 {
+            color: #cc5500;
+            margin-bottom: 0.8rem;
+            font-size: 1.5rem;
+        }
+
+        .result-summary {
+            font-size: 1.2rem;
+            text-align: center;
+            font-weight: bold;
+            color: #1f4a2e;
+            margin-bottom: 1rem;
+        }
+
+        .result-detail {
+            max-height: 320px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            background: #fffaf0;
+            border-radius: 1rem;
+            padding: 0.5rem;
+        }
+
+        .result-item {
+            padding: 0.5rem 0.8rem;
+            border-bottom: 1px solid #ffd9a0;
+            display: flex;
+            gap: 0.8rem;
+            align-items: baseline;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-item .correct {
+            color: #2a8a4a;
+            font-weight: 700;
+        }
+        .result-item .incorrect {
+            color: #cc3333;
+            font-weight: 700;
+        }
+
+        /* ===== PANTALLA DE CORRECCIÓN (contraseña) ===== */
+        .password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .password-box {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: 2rem;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .password-box h2 {
+            color: #1e6f9f;
+            margin-bottom: 1rem;
+            font-size: 1.6rem;
+        }
+
+        .password-box input[type="password"] {
+            width: 100%;
+            padding: 0.8rem 1.2rem;
+            font-size: 1.2rem;
+            border: 2px solid #ccc;
+            border-radius: 40px;
+            margin-bottom: 1.2rem;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .password-box input[type="password"]:focus {
+            border-color: #1e6f9f;
+        }
+
+        .password-box .btn-group {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: center;
+        }
+
+        .password-box .btn {
+            min-width: 100px;
+            justify-content: center;
+        }
+
+        .password-box .error-msg {
+            color: #cc3333;
+            font-weight: 700;
+            margin-top: 0.8rem;
+            display: none;
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #aa8855;
+            margin-top: 1.2rem;
+            border-top: 1px solid #f0e0d0;
+            padding-top: 0.8rem;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 800px) {
+            .quiz-wrapper {
+                padding: 1.2rem;
+            }
+            #welcomeScreen h1 {
+                font-size: 2.2rem;
+            }
+            .question-text {
+                font-size: 1.05rem;
+            }
+            .option label {
+                font-size: 0.92rem;
+            }
+            .btn {
+                padding: 0.5rem 1.2rem;
+                font-size: 0.85rem;
+            }
+            .btn-start {
+                font-size: 1.4rem;
+                padding: 0.8rem 2.5rem;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .quiz-wrapper {
+                padding: 0.8rem;
+                border-radius: 1.5rem;
+            }
+            #welcomeScreen h1 {
+                font-size: 1.8rem;
+            }
+            .question-card {
+                padding: 1rem;
+            }
+            .option {
+                padding: 0.6rem 0.8rem;
+                gap: 0.6rem;
+            }
+            .option label {
+                font-size: 0.85rem;
+            }
+            .nav-buttons {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .nav-buttons .btn {
+                justify-content: center;
+            }
+            .progress-area {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+        }
+
+        /* ===== UTILIDADES ===== */
+        .hidden {
+            display: none !important;
+        }
+        .mt-1 {
+            margin-top: 0.8rem;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .full-width {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-wrapper">
+    <!-- ===== PANTALLA DE BIENVENIDA ===== -->
+    <div id="welcomeScreen">
+        <h1>⚙️ Evaluación Técnica</h1>
+        <div class="subtitle">Arquitectura de Firmware · Diagnóstico · UEFI · BIOS</div>
+        <div class="instructions">
+            <strong>📌 Instrucciones:</strong><br>
+            • Selecciona la respuesta que consideres correcta.<br>
+            • La opción elegida se resaltará en <strong>azul oscuro</strong>.<br>
+            • No se mostrará retroalimentación hasta la corrección final.<br>
+            • Al completar, presiona <strong>"Corrección"</strong> e ingresa la contraseña.<br>
+            • Una vez corregido, podrás generar una <strong>nueva prueba</strong>.
+        </div>
+        <button class="btn-start" id="startBtn">🚀 Comenzar Evaluación</button>
+        <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">10 preguntas seleccionadas aleatoriamente</div>
+    </div>
+
+    <!-- ===== ÁREA DEL CUESTIONARIO ===== -->
+    <div id="quizArea">
+        <div class="progress-area">
+            <span class="question-counter" id="questionCounter">Pregunta 1 / 10</span>
+            <span class="score-badge" id="liveScore">✅ Respondidas: 0 / 10</span>
+        </div>
+
+        <div id="questionContainer"></div>
+
+        <div class="nav-buttons">
+            <button id="prevBtn" class="btn btn-secondary">◀ Anterior</button>
+            <button id="nextBtn" class="btn btn-primary">Siguiente ▶</button>
+            <button id="finishBtn" class="btn btn-success" style="display:none;">📋 Finalizar</button>
+        </div>
+
+        <!-- Botón de corrección (visible al finalizar) -->
+        <div id="correctionArea" class="text-center mt-1" style="display:none;">
+            <button id="correctionBtn" class="btn btn-danger" style="font-size:1.2rem; padding:0.8rem 2.5rem;">🔐 Corrección</button>
+        </div>
+
+        <!-- Botón Nueva Prueba (visible solo tras corrección exitosa) -->
+        <div id="newTestArea" class="text-center mt-1" style="display:none;">
+            <button id="newTestBtn" class="btn btn-outline" style="font-size:1.1rem; padding:0.8rem 2.5rem;">🔄 Nueva prueba</button>
+        </div>
+
+        <!-- Panel de resultados detallados -->
+        <div id="resultsPanel"></div>
+        <footer>📌 Selecciona una opción. Al finalizar, solicita la corrección.</footer>
+    </div>
+</div>
+
+<!-- ===== OVERLAY DE CONTRASEÑA ===== -->
+<div class="password-overlay" id="passwordOverlay">
+    <div class="password-box">
+        <h2>🔑 Corrección</h2>
+        <p style="margin-bottom:1.2rem; color:#555;">Ingresa la contraseña para ver los resultados.</p>
+        <input type="password" id="passwordInput" placeholder="Contraseña" autocomplete="off">
+        <div class="btn-group">
+            <button class="btn btn-secondary" id="passwordCancelBtn">Cancelar</button>
+            <button class="btn btn-primary" id="passwordConfirmBtn">Confirmar</button>
+        </div>
+        <div class="error-msg" id="passwordError">❌ Solicita la corrección a tu profesor</div>
+    </div>
+</div>
+
+<script>
+    // ========================================================================
+    //  BANCO DE PREGUNTAS (combinado de ambos materiales)
+    // ========================================================================
+    const FULL_BANK = [
+        // ---- Archivo 1: Arquitectura de Firmware y Arranque (20 preguntas) ----
+        {
+            text: "Un sistema completa la Fase 0 (encendido físico), pero el monitor permanece en negro y no se emiten códigos sonoros (beeps). ¿Qué componente de la jerarquía de capas es el responsable más probable de este bloqueo absoluto?",
+            options: [
+                "Capa 4: El kernel del Sistema Operativo no encuentra el sector de arranque.",
+                "Capa 3: El controlador de interrupciones del BIOS ha detectado un periférico incompatible.",
+                "Capa 2: El chip EEPROM no logra liberar el código base para iniciar el POST.",
+                "Capa 1: El bus de datos de la CPU tiene una frecuencia de overclocking inestable.",
+                "El Bootloader: El programa de inicio no ha sido cargado en la memoria RAM."
+            ],
+            correct: 2  // índice 2 = "Capa 2: El chip EEPROM..."
+        },
+        {
+            text: "Al comparar las arquitecturas SPI Flash y NOR Flash para el almacenamiento del BIOS, ¿cuál es la razón técnica principal por la que la NOR Flash se prefiere en dispositivos embebidos críticos a pesar de su mayor costo?",
+            options: [
+                "Su capacidad de almacenamiento masivo alcanza los Zettabytes.",
+                "Permite un acceso aleatorio que garantiza una mayor integridad y fiabilidad en la lectura.",
+                "Utiliza una comunicación serial periférica (SPI) más rápida que el estándar moderno.",
+                "Implementa nativamente módulos de compatibilidad CSM para hardware antiguo.",
+                "Es inmune al deterioro físico por ciclos de escritura y borrado."
+            ],
+            correct: 1  // "Permite un acceso aleatorio..."
+        },
+        {
+            text: "Durante una actualización de firmware (flashing), ocurre una fluctuación de voltaje que interrumpe el proceso al 60%. ¿Por qué el sistema se vuelve un 'ladrillo' (bricked) incapaz de ejecutar el POST?",
+            options: [
+                "Porque el Sistema Operativo (Capa 4) bloquea el acceso al hardware por seguridad.",
+                "Porque el código en la EEPROM queda a medias, eliminando las rutinas básicas de inicialización de hardware.",
+                "Porque el Secure Boot detecta una firma digital incompleta y detiene el procesador.",
+                "Porque el chip EEPROM requiere energía constante para mantener su naturaleza de memoria no volátil.",
+                "Porque los parámetros de overclocking se borran permanentemente de la memoria RAM."
+            ],
+            correct: 1
+        },
+        {
+            text: "Un técnico intenta instalar un disco duro de 4 TB en un sistema antiguo con BIOS tradicional. El sistema solo reconoce 2 TB. ¿Cuál es el límite técnico que causa este comportamiento?",
+            options: [
+                "El BIOS tradicional no admite rutinas de servicio de entrada/salida para periféricos modernos.",
+                "El límite de almacenamiento del BIOS tradicional está restringido a un máximo de 2 TB por diseño.",
+                "El proceso POST se detiene al detectar dispositivos de almacenamiento de alta densidad.",
+                "La EEPROM del sistema antiguo no tiene suficientes ciclos de vida para gestionar tablas de particiones grandes.",
+                "El módulo CSM (Compatibility Support Module) está desactivado por defecto."
+            ],
+            correct: 1
+        },
+        {
+            text: "En el Paso 1 (POST), el sistema emite una serie de pitidos específicos tras verificar el procesador pero antes de detectar los dispositivos de almacenamiento. ¿En qué sub-paso se encuentra la falla?",
+            options: [
+                "Inicialización de Periféricos Esenciales.",
+                "Traspaso de control al Kernel.",
+                "Test de Memoria (RAM).",
+                "Búsqueda del sector de arranque.",
+                "Configuración de frecuencias de bus."
+            ],
+            correct: 2
+        },
+        {
+            text: "¿Qué función del BIOS actúa específicamente como el intermediario que permite al software comunicarse con los componentes físicos del ordenador?",
+            options: [
+                "El Inventario de Hardware que configura los buses de datos.",
+                "Las rutinas de servicio de entrada/salida y el controlador de interrupciones.",
+                "El Secure Boot que verifica la integridad del sistema operativo.",
+                "El mecanismo de Wear-leveling que gestiona los errores de la EEPROM.",
+                "El pulso eléctrico que viaja desde el botón hasta la placa base."
+            ],
+            correct: 1
+        },
+        {
+            text: "Un servidor de alta disponibilidad reporta errores de suma de comprobación (checksum) frecuentes en su firmware. El análisis revela que el chip EEPROM ha superado los 100,000 ciclos. ¿Qué medida de mitigación debería haberse implementado para maximizar su vida útil?",
+            options: [
+                "Reducir la temperatura ambiente para evitar la degradación acelerada.",
+                "Utilizar un entorno gráfico (GUI) para reducir la carga en la EEPROM.",
+                "Implementar gestión avanzada de errores y nivelación de desgaste (wear-leveling).",
+                "Sustituir el chip EEPROM por una memoria volátil de alta velocidad.",
+                "Desactivar el Secure Boot para reducir las escrituras de seguridad."
+            ],
+            correct: 2
+        },
+        {
+            text: "¿Cuál es la diferencia crítica en el proceso de 'Paso 3: El Relevo al Sistema Operativo' entre un BIOS tradicional y UEFI?",
+            options: [
+                "El BIOS tradicional entrega el control directamente al Kernel, mientras UEFI usa un Bootloader intermedio.",
+                "UEFI localiza el sector de arranque en la EEPROM, mientras el BIOS lo busca en el disco duro.",
+                "UEFI permite un arranque más rápido y mayor seguridad mediante Secure Boot antes de ceder el control.",
+                "El BIOS tradicional realiza un inventario de hardware en la Capa 4, a diferencia de UEFI.",
+                "No existe diferencia; ambos procesos son idénticos en la ejecución secuencial."
+            ],
+            correct: 2
+        },
+        {
+            text: "Durante la fase de 'Configuración y Detección' (Paso 2), un usuario modifica las frecuencias de bus (overclocking). ¿Dónde se almacenan estos parámetros para que persistan tras apagar el equipo?",
+            options: [
+                "En la memoria RAM principal para acceso rápido durante el POST.",
+                "En el Kernel del Sistema Operativo (Capa 4).",
+                "En el chip EEPROM junto con el BIOS y los parámetros esenciales.",
+                "En el sector de arranque del dispositivo de almacenamiento prioritario.",
+                "En el controlador de interrupciones de la Capa 3."
+            ],
+            correct: 2
+        },
+        {
+            text: "Si un sistema moderno necesita ejecutar un Sistema Operativo diseñado para hardware antiguo que no soporta UEFI, ¿qué tecnología debe estar habilitada?",
+            options: [
+                "Secure Boot para validar el kernel antiguo.",
+                "Módulos CSM (Compatibility Support Module).",
+                "Arquitectura de almacenamiento NOR Flash de alta integridad.",
+                "Ciclos de vida de la EEPROM superiores a 100,000.",
+                "Interfaz gráfica avanzada (GUI) con soporte para mouse."
+            ],
+            correct: 1
+        },
+        {
+            text: "Un técnico sospecha que la EEPROM está fallando debido a factores de estrés externos. Según el material, ¿qué combinación de factores acelera el deterioro físico del chip?",
+            options: [
+                "Uso excesivo del mouse en la interfaz UEFI y fragmentación del disco duro.",
+                "Temperaturas ambientales elevadas y fluctuaciones de voltaje.",
+                "Actualizaciones frecuentes del Sistema Operativo y errores en el sector de arranque.",
+                "Incompatibilidad con Secure Boot y uso de discos duros superiores a 2 TB.",
+                "Ejecución prolongada del POST y fallos en el test de memoria RAM."
+            ],
+            correct: 1
+        },
+        {
+            text: "¿Por qué se considera que el flasheo del BIOS se realiza en un 'entorno seguro' si se hace desde la herramienta integrada en la UEFI (ej. EZ Flash) en lugar de desde el Sistema Operativo?",
+            options: [
+                "Porque la UEFI utiliza una interfaz gráfica más intuitiva que el OS.",
+                "Porque evita la interferencia de procesos del Sistema Operativo que podrían interrumpir la escritura en la EEPROM.",
+                "Porque la UEFI aumenta automáticamente el voltaje para asegurar la estabilidad energética.",
+                "Porque el chip EEPROM solo es reprogramable eléctricamente desde la Capa 3.",
+                "Porque el Secure Boot bloquea cualquier intento de escritura desde la Capa 4."
+            ],
+            correct: 1
+        },
+        {
+            text: "¿Cuál es el propósito final del proceso POST antes de permitir que el sistema avance a la siguiente fase?",
+            options: [
+                "Ceder el control absoluto del hardware al núcleo del sistema operativo.",
+                "Cargar el pequeño programa de inicio (Bootloader) en la RAM.",
+                "Verificar la viabilidad del hardware crítico (CPU, RAM, Almacenamiento).",
+                "Borrar la imagen actual del firmware para escribir una nueva.",
+                "Establecer la comunicación serial periférica (SPI) con el procesador."
+            ],
+            correct: 2
+        },
+        {
+            text: "En la secuencia de arranque, ¿en qué momento exacto se produce el 'traspaso de control absoluto del hardware'?",
+            options: [
+                "Cuando el pulso eléctrico despierta a la EEPROM en la Fase 0.",
+                "Durante el inventario de hardware en el Paso 2.",
+                "Cuando el BIOS cede el control al núcleo (kernel) del Sistema Operativo.",
+                "Al finalizar el test de memoria RAM en el proceso POST.",
+                "Inmediatamente después de que el usuario sale de la interfaz de configuración (BIOS Setup)."
+            ],
+            correct: 2
+        },
+        {
+            text: "Un sistema UEFI reporta que no puede arrancar porque no encuentra un 'sector de arranque' válido. ¿Qué acción técnica está fallando en la jerarquía?",
+            options: [
+                "La EEPROM no ha liberado el código del BIOS.",
+                "El firmware no logra localizar el programa de inicio en el dispositivo prioritario.",
+                "El controlador de interrupciones ha detectado un error físico en la placa base.",
+                "La nivelación de desgaste (wear-leveling) ha bloqueado el acceso al almacenamiento.",
+                "El Secure Boot ha detectado una vulnerabilidad de seguridad grave."
+            ],
+            correct: 1
+        },
+        {
+            text: "¿Qué componente interno del BIOS es responsable de gestionar las señales de prioridad de los dispositivos de hardware para evitar colisiones de datos?",
+            options: [
+                "Las rutinas de servicio de entrada/salida.",
+                "El controlador de interrupciones.",
+                "El inventario de hardware.",
+                "El módulo CSM de compatibilidad.",
+                "El mecanismo de Secure Boot."
+            ],
+            correct: 1
+        },
+        {
+            text: "Ante un fallo masivo de hardware, el sistema emite códigos sonoros repetitivos. ¿Por qué estos códigos se consideran 'herramientas de diagnóstico'?",
+            options: [
+                "Porque indican que el Sistema Operativo ha tomado el control del hardware.",
+                "Porque señalan exactamente en qué nodo del proceso POST falló el sistema.",
+                "Porque confirman que la EEPROM ha sido reprogramada exitosamente.",
+                "Porque activan automáticamente el protocolo de actualización segura.",
+                "Porque permiten al usuario acceder a la interfaz gráfica de la UEFI."
+            ],
+            correct: 1
+        },
+        {
+            text: "¿Por qué la EEPROM se clasifica como 'Memoria No Volátil' en el contexto de la Bóveda Física?",
+            options: [
+                "Porque puede borrarse y reescribirse eléctricamente sin retirar el chip.",
+                "Porque mantiene la información del firmware de forma permanente sin necesidad de energía.",
+                "Porque gestiona automáticamente los errores mediante wear-leveling.",
+                "Porque permite una comunicación rápida y secuencial (SPI).",
+                "Porque soporta capacidades masivas de hasta 9 Zettabytes."
+            ],
+            correct: 1
+        },
+        {
+            text: "Un usuario desea mejorar la seguridad de su equipo para evitar que se ejecute software de arranque no autorizado. ¿Qué característica técnica de UEFI es fundamental para esto?",
+            options: [
+                "Interfaz gráfica avanzada (GUI).",
+                "Soporte para mouse en la configuración.",
+                "Secure Boot.",
+                "Límites de almacenamiento de 9 Zettabytes.",
+                "Compatibilidad con módulos CSM."
+            ],
+            correct: 2
+        },
+        {
+            text: "Si el BIOS es el 'Cerebro Lógico' del sistema, ¿por qué depende intrínsecamente del 'Hardware Físico' de la Capa 1?",
+            options: [
+                "Porque el BIOS se almacena físicamente en la CPU.",
+                "Porque el BIOS es el encargado de inicializar y despertar los componentes de la placa base y CPU.",
+                "Porque la Capa 1 contiene las rutinas de servicio de entrada/salida del firmware.",
+                "Porque el Sistema Operativo reside en la Capa 1 antes del arranque.",
+                "Porque la EEPROM requiere que la Capa 1 gestione el wear-leveling."
+            ],
+            correct: 1
+        },
+
+        // ---- Archivo 2: Diagnóstico y Razonamiento Técnico (20 preguntas) ----
+        {
+            text: "Un servidor con un volumen de almacenamiento de 8 TB no logra arrancar tras una migración de hardware. Se confirma que el disco tiene una tabla de particiones MBR. ¿Cuál es el diagnóstico técnico correcto según la evolución de los estándares?",
+            options: [
+                "El firmware está en modo UEFI nativo, el cual requiere GPT para manejar volúmenes superiores a 2.2 TB.",
+                "El BIOS legacy no reconoce el sistema de archivos NTFS en discos de gran capacidad.",
+                "El Secure Boot está bloqueando el acceso al registro maestro de arranque (MBR) por seguridad.",
+                "El hardware es inerte porque el firmware no puede traducir las señales eléctricas del disco de 8 TB."
+            ],
+            correct: 0
+        },
+        {
+            text: "Durante el arranque, un sistema emite una serie de 'beeps' físicos y la pantalla permanece en negro. ¿En qué fase de la secuencia de arranque se encuentra el fallo?",
+            options: [
+                "Inicialización UEFI, específicamente en la carga de Secure Boot.",
+                "Boot Manager, ya que no encuentra un dispositivo de arranque válido.",
+                "Encendido & POST, donde la UEFI verifica el hardware básico.",
+                "Capa de Sistema Operativo, debido a un conflicto crítico de drivers."
+            ],
+            correct: 2
+        },
+        {
+            text: "Un técnico intenta instalar una distribución de Linux personalizada, pero el sistema rechaza el cargador de arranque (bootloader). ¿Qué ajuste de la UEFI es el responsable probable?",
+            options: [
+                "El perfil XMP/DOCP está forzando voltajes incompatibles con el kernel de Linux.",
+                "Secure Boot está activo y no reconoce la firma digital de la distribución.",
+                "El orden de arranque (Boot Order) prioriza dispositivos NVMe sobre USB.",
+                "La inicialización paralela de la UEFI está causando una condición de carrera en el hardware."
+            ],
+            correct: 1
+        },
+        {
+            text: "Al revisar el Administrador de Dispositivos, un componente muestra un icono de flecha hacia abajo. ¿Qué acción técnica se deduce de este estado?",
+            options: [
+                "El dispositivo tiene un conflicto de recursos (IRQ) y debe ser reasignado.",
+                "El controlador está corrupto y requiere una reversión (rollback) inmediata.",
+                "El dispositivo fue deshabilitado manualmente y no consume recursos del sistema.",
+                "El hardware no ha sido detectado por la UEFI y requiere revisión física."
+            ],
+            correct: 2
+        },
+        {
+            text: "Se presenta un error de inestabilidad en una GPU de alto rendimiento recién instalada. El técnico ya instaló los drivers de la GPU del sitio del fabricante. Según las 'Reglas de Oro', ¿qué paso crítico podría haberse omitido?",
+            options: [
+                "No se activó el Overclocking en la UEFI para dar soporte al voltaje de la GPU.",
+                "No se instalaron los controladores del Chipset antes que los de la GPU.",
+                "Se utilizó Windows Update para instalar drivers genéricos inicialmente.",
+                "No se formateó la unidad USB en FAT32 antes de la instalación de drivers."
+            ],
+            correct: 1
+        },
+        {
+            text: "Un sistema detecta un 'Dispositivo Desconocido' en el SO, pero el hardware aparece correctamente listado en la configuración de la UEFI. ¿Dónde radica el problema?",
+            options: [
+                "Existe un daño físico en la conexión o suministro de energía del componente.",
+                "El firmware (EEPROM) del dispositivo está corrupto y es 'inerte'.",
+                "El Sistema Operativo carece del traductor (driver) necesario para comunicarse con el hardware.",
+                "La tabla de particiones GPT está impidiendo que el SO asigne un ID de hardware."
+            ],
+            correct: 2
+        },
+        {
+            text: "Un usuario desea mejorar los tiempos de carga de su sistema mediante perfiles de memoria avanzados. ¿Qué tecnología de la UEFI permite ajustar automáticamente velocidad, latencia y voltaje?",
+            options: [
+                "VCore Adjustment.",
+                "Secure Boot.",
+                "XMP / DOCP.",
+                "Flashing Q-Flash."
+            ],
+            correct: 2
+        },
+        {
+            text: "¿Por qué es crítico no interrumpir el proceso de 'Flashing' de un firmware?",
+            options: [
+                "Porque el Sistema Operativo perdería la firma digital de Secure Boot.",
+                "Porque se podría dejar el hardware en un estado inerte al corromper las instrucciones básicas en la EEPROM/Flash.",
+                "Porque el Administrador de Dispositivos mostraría un Código 43 permanente.",
+                "Porque el orden de arranque se resetearía permanentemente a USB."
+            ],
+            correct: 1
+        },
+        {
+            text: "Al diagnosticar un 'Triángulo Amarillo' con Código 10 en el Administrador de Dispositivos, ¿cuál es la interpretación técnica correcta?",
+            options: [
+                "El dispositivo está funcionando correctamente pero requiere una versión más reciente.",
+                "Existe un error de instalación o un conflicto que requiere revisión de propiedades.",
+                "El hardware ha sido deshabilitado para ahorrar energía.",
+                "El ID de Hardware (PCI\\VEN...) no existe en la base de datos de Windows Update."
+            ],
+            correct: 1
+        },
+        {
+            text: "En la 'Pirámide de Abstracción', ¿cuál es la función exacta de los Drivers en la Capa Superior?",
+            options: [
+                "Inicializar el hardware y realizar el POST.",
+                "Traducir las llamadas del Sistema Operativo hacia el hardware.",
+                "Gestionar el almacenamiento no volátil en la EEPROM.",
+                "Verificar las firmas digitales de los rootkits."
+            ],
+            correct: 1
+        },
+        {
+            text: "Un técnico nota que el mouse funciona perfectamente en la interfaz de configuración del sistema, pero el teclado solo funciona en modo texto. ¿Qué tipo de firmware está utilizando probablemente?",
+            options: [
+                "BIOS Legacy.",
+                "UEFI Moderno.",
+                "Firmware de bajo nivel de teclado.",
+                "Driver genérico de Windows."
+            ],
+            correct: 0
+        },
+        {
+            text: "Tras actualizar un driver de video, el sistema presenta pantallas azules (BSOD). ¿Cuál es la herramienta nativa recomendada para revertir este estado sin reinstalar el SO?",
+            options: [
+                "Utilidad Q-Flash de la placa base.",
+                "Opción de 'Reversión' (Rollback) en el Administrador de Dispositivos.",
+                "Deshabilitar el Secure Boot en la UEFI.",
+                "Cambiar el Boot Order a modo Legacy."
+            ],
+            correct: 1
+        },
+        {
+            text: "Un sistema reporta el error 'No bootable device found'. El disco físico es nuevo y está conectado. ¿Qué debe verificar el técnico en la Capa Media?",
+            options: [
+                "La integridad de los drivers en el Administrador de Dispositivos.",
+                "El suministro eléctrico de la GPU.",
+                "El Boot Order y la carga de la configuración en la UEFI.",
+                "Si el teclado está en modo 16 bits real."
+            ],
+            correct: 2
+        },
+        {
+            text: "¿Qué ventaja técnica ofrece la arquitectura de 32 o 64 bits de UEFI sobre los 16 bits de BIOS durante el encendido?",
+            options: [
+                "Permite el uso de memorias EEPROM de mayor capacidad.",
+                "Habilita la inicialización paralela del hardware, acelerando el arranque.",
+                "Elimina la necesidad de drivers en el Sistema Operativo.",
+                "Garantiza que todos los dispositivos tengan un triángulo amarillo de advertencia."
+            ],
+            correct: 1
+        },
+        {
+            text: "Se requiere actualizar el firmware para dar soporte a una nueva CPU. Según el protocolo de 'Flashing', ¿cuál es el requisito de formato para la unidad USB?",
+            options: [
+                "NTFS para soportar archivos de gran tamaño.",
+                "ExFAT para compatibilidad multiplataforma.",
+                "FAT32, utilizando la utilidad integrada en la placa base.",
+                "El USB debe estar vacío y sin particiones (unallocated)."
+            ],
+            correct: 2
+        },
+        {
+            text: "¿Cuál es la principal diferencia de almacenamiento entre el firmware y los drivers?",
+            options: [
+                "El firmware reside en memoria no volátil (Flash/EEPROM) y el driver es software en el SO.",
+                "El driver es hardware físico y el firmware es solo código temporal.",
+                "El firmware se descarga de Windows Update y los drivers de la ROM.",
+                "No hay diferencia; ambos se almacenan en el registro maestro de arranque (MBR)."
+            ],
+            correct: 0
+        },
+        {
+            text: "Un dispositivo presenta un 'Conflicto de recursos (IRQ)'. ¿En qué nivel de diagnóstico se encuentra este problema según la guía técnica?",
+            options: [
+                "Problema físico de conexión.",
+                "Falta de controlador en el SO.",
+                "Controlador instalado, pero el dispositivo falla por incompatibilidad o conflicto.",
+                "El dispositivo está deshabilitado manualmente."
+            ],
+            correct: 2
+        },
+        {
+            text: "¿Qué riesgo de seguridad mitiga directamente el uso de Secure Boot?",
+            options: [
+                "El desgaste prematuro de la memoria Flash.",
+                "El acceso no autorizado a la interfaz gráfica de la UEFI.",
+                "La ejecución de rootkits y malware durante el proceso de arranque.",
+                "El sobrecalentamiento de la CPU durante el overclocking."
+            ],
+            correct: 2
+        },
+        {
+            text: "Un técnico observa que un sistema funciona bien para tareas básicas, pero tiene bajo rendimiento en juegos y aplicaciones NVMe. ¿Qué acción de mantenimiento es prioritaria?",
+            options: [
+                "Cambiar el teclado a un modelo mecánico.",
+                "Instalar controladores optimizados del sitio del fabricante (GPU, Chipsets, NVMe).",
+                "Activar el modo Legacy en la BIOS para mejorar la compatibilidad.",
+                "Reinstalar el SO para limpiar el Administrador de Dispositivos."
+            ],
+            correct: 1
+        },
+        {
+            text: "Si el hardware NO es detectado en la UEFI, ¿qué debe descartar el técnico antes de pasar a la capa de software?",
+            options: [
+                "La versión del driver de la GPU.",
+                "La configuración de la tabla GPT.",
+                "Problemas físicos como conexiones, energía o daños de hardware.",
+                "El estado del icono en el Administrador de Dispositivos."
+            ],
+            correct: 2
+        }
+    ];
+
+    // ========================================================================
+    //  CONFIGURACIÓN
+    // ========================================================================
+    const NUM_PREGUNTAS = 10;          // Número de preguntas por prueba
+    const CONTRASEÑA = "Tecno2026";   // Contraseña para corrección
+
+    // ========================================================================
+    //  ESTADO
+    // ========================================================================
+    let currentQuestions = [];          // Array de objetos (texto, opciones mezcladas, correctIndex)
+    let userAnswers = [];              // Índice de la opción seleccionada (null si no)
+    let currentIndex = 0;              // Índice de pregunta actual
+    let quizFinished = false;          // Indica si se completó el cuestionario
+    let correctionDone = false;        // Indica si la corrección fue exitosa
+    let fullscreenActive = false;
+
+    // Elementos DOM
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const quizArea = document.getElementById('quizArea');
+    const questionContainer = document.getElementById('questionContainer');
+    const questionCounter = document.getElementById('questionCounter');
+    const liveScore = document.getElementById('liveScore');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const finishBtn = document.getElementById('finishBtn');
+    const correctionArea = document.getElementById('correctionArea');
+    const correctionBtn = document.getElementById('correctionBtn');
+    const newTestArea = document.getElementById('newTestArea');
+    const newTestBtn = document.getElementById('newTestBtn');
+    const resultsPanel = document.getElementById('resultsPanel');
+    const startBtn = document.getElementById('startBtn');
+    const passwordOverlay = document.getElementById('passwordOverlay');
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordConfirmBtn = document.getElementById('passwordConfirmBtn');
+    const passwordCancelBtn = document.getElementById('passwordCancelBtn');
+    const passwordError = document.getElementById('passwordError');
+
+    // ========================================================================
+    //  FUNCIONES DE SEGURIDAD
+    // ========================================================================
+
+    // Bloquear teclas de inspección (F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, etc.)
+    document.addEventListener('keydown', function(e) {
+        // F12
+        if (e.key === 'F12') {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+Shift+I (abrir dev tools)
+        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+U (ver código fuente)
+        if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+S (guardar)
+        if (e.ctrlKey && (e.key === 'S' || e.key === 's')) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+Shift+J (consola)
+        if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+C (copiar) - deshabilitar
+        if (e.ctrlKey && (e.key === 'C' || e.key === 'c')) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+V (pegar) - deshabilitar
+        if (e.ctrlKey && (e.key === 'V' || e.key === 'v')) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+X (cortar) - deshabilitar
+        if (e.ctrlKey && (e.key === 'X' || e.key === 'x')) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+A (seleccionar todo) - permitir? mejor deshabilitar para evitar copia masiva
+        if (e.ctrlKey && (e.key === 'A' || e.key === 'a')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Deshabilitar menú contextual (clic derecho)
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+    });
+
+    // Deshabilitar arrastrar texto y selección
+    document.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+        return false;
+    });
+
+    // Deshabilitar copiar, pegar, cortar (adicional)
+    document.addEventListener('copy', function(e) { e.preventDefault(); return false; });
+    document.addEventListener('paste', function(e) { e.preventDefault(); return false; });
+    document.addEventListener('cut', function(e) { e.preventDefault(); return false; });
+    document.addEventListener('selectstart', function(e) { e.preventDefault(); return false; });
+
+    // Prevenir gestos táctiles de recarga (pull-to-refresh) en móviles
+    document.addEventListener('touchmove', function(e) {
+        if (e.target.closest('.quiz-wrapper') || e.target.closest('.password-overlay')) {
+            // Permitir scroll normal dentro del contenido
+            return;
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    // Prevenir botón "Atrás" del navegador (con advertencia)
+    window.addEventListener('popstate', function(e) {
+        if (quizArea.style.display === 'block') {
+            if (!confirm('⚠️ ¿Estás seguro de que quieres salir? Perderás el progreso actual.')) {
+                // Reintentar mantener la página
+                history.pushState(null, '', window.location.href);
+            } else {
+                // Permitir salir
+            }
+        } else {
+            history.pushState(null, '', window.location.href);
+        }
+    });
+    // Empujar estado inicial
+    history.pushState(null, '', window.location.href);
+
+    // Advertencia de pérdida de datos (beforeunload)
+    window.addEventListener('beforeunload', function(e) {
+        if (quizArea.style.display === 'block' && !quizFinished && !correctionDone) {
+            const message = '⚠️ Tienes una evaluación en progreso. ¿Seguro que quieres salir?';
+            e.preventDefault();
+            e.returnValue = message;
+            return message;
+        }
+    });
+
+    // ========================================================================
+    //  FUNCIONES DE UTILIDAD
+    // ========================================================================
+
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    // Seleccionar N preguntas aleatorias del banco y mezclar sus opciones
+    function generateRandomQuiz(num = NUM_PREGUNTAS) {
+        // Copiar banco y mezclar
+        const shuffledBank = shuffleArray([...FULL_BANK]);
+        const selected = shuffledBank.slice(0, num);
+
+        // Para cada pregunta, mezclar opciones y reasignar índice correcto
+        const quiz = selected.map(q => {
+            const options = q.options.slice(); // copiar
+            const correctAnswer = options[q.correct]; // texto correcto original
+
+            // Mezclar opciones
+            const shuffledOptions = shuffleArray(options);
+            // Encontrar nueva posición del texto correcto
+            const newCorrectIndex = shuffledOptions.indexOf(correctAnswer);
+
+            return {
+                text: q.text,
+                options: shuffledOptions,
+                correct: newCorrectIndex
+            };
+        });
+
+        return quiz;
+    }
+
+    // ========================================================================
+    //  RENDERIZADO DE PREGUNTAS
+    // ========================================================================
+
+    function renderQuestion(index) {
+        if (!currentQuestions.length) return;
+        const q = currentQuestions[index];
+        const selected = userAnswers[index];
+        const letters = ['A', 'B', 'C', 'D', 'E']; // hasta 5 opciones
+
+        let optionsHtml = '';
+        q.options.forEach((opt, idx) => {
+            const letter = letters[idx] || '?';
+            const isChecked = (selected === idx);
+            const selectedClass = isChecked ? 'selected' : '';
+            optionsHtml += `
+                <div class="option ${selectedClass}" data-optindex="${idx}">
+                    <input type="radio" name="question" value="${idx}" id="opt_${idx}" ${isChecked ? 'checked' : ''}>
+                    <label for="opt_${idx}"><strong>${letter})</strong> ${opt}</label>
+                </div>
+            `;
+        });
+
+        const html = `
+            <div class="question-card">
+                <div class="question-text">${q.text}</div>
+                <div class="options" id="optionsContainer">
+                    ${optionsHtml}
+                </div>
+            </div>
+        `;
+        questionContainer.innerHTML = html;
+
+        // Event listeners para selección
+        const optionDivs = document.querySelectorAll('.option');
+        optionDivs.forEach(div => {
+            const radio = div.querySelector('input[type="radio"]');
+            const optIndex = parseInt(div.getAttribute('data-optindex'), 10);
+            if (radio) {
+                radio.addEventListener('change', () => {
+                    if (radio.checked) {
+                        selectOption(optIndex);
+                    }
+                });
+            }
+            div.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    const radioInside = div.querySelector('input');
+                    if (radioInside && !radioInside.checked) {
+                        radioInside.checked = true;
+                        selectOption(optIndex);
+                    }
+                }
+            });
+        });
+
+        // Actualizar contadores
+        const answered = userAnswers.filter(a => a !== null).length;
+        questionCounter.textContent = `Pregunta ${index+1} / ${currentQuestions.length}`;
+        liveScore.textContent = `✅ Respondidas: ${answered} / ${currentQuestions.length}`;
+
+        // Actualizar botones
+        prevBtn.disabled = (index === 0);
+        if (index === currentQuestions.length - 1) {
+            nextBtn.style.display = 'none';
+            finishBtn.style.display = 'inline-flex';
+        } else {
+            nextBtn.style.display = 'inline-flex';
+            finishBtn.style.display = 'none';
+        }
+
+        // Si todas respondidas, mostrar área de corrección
+        if (answered === currentQuestions.length && !quizFinished) {
+            finishBtn.style.display = 'none';
+            correctionArea.style.display = 'block';
+        } else {
+            correctionArea.style.display = 'none';
+        }
+    }
+
+    function selectOption(optIndex) {
+        if (quizFinished) return;
+        userAnswers[currentIndex] = optIndex;
+        // Re-renderizar para actualizar estilo visual
+        renderQuestion(currentIndex);
+    }
+
+    // ========================================================================
+    //  NAVEGACIÓN
+    // ========================================================================
+
+    function goToPrev() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            renderQuestion(currentIndex);
+        }
+    }
+
+    function goToNext() {
+        if (currentIndex < currentQuestions.length - 1) {
+            currentIndex++;
+            renderQuestion(currentIndex);
+        }
+    }
+
+    function finishQuiz() {
+        const answered = userAnswers.filter(a => a !== null).length;
+        if (answered < currentQuestions.length) {
+            if (!confirm(`⚠️ Aún te faltan ${currentQuestions.length - answered} pregunta(s) por responder. ¿Finalizar de todas formas?`)) {
+                return;
+            }
+        }
+        quizFinished = true;
+        // Ocultar botones de navegación, mostrar solo corrección
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+        finishBtn.style.display = 'none';
+        correctionArea.style.display = 'block';
+        // Deshabilitar selección de opciones
+        document.querySelectorAll('.option input[type="radio"]').forEach(r => r.disabled = true);
+    }
+
+    // ========================================================================
+    //  CORRECCIÓN CON CONTRASEÑA
+    // ========================================================================
+
+    function openPasswordDialog() {
+        passwordOverlay.style.display = 'flex';
+        passwordInput.value = '';
+        passwordError.style.display = 'none';
+        passwordInput.focus();
+    }
+
+    function closePasswordDialog() {
+        passwordOverlay.style.display = 'none';
+    }
+
+    function checkPassword() {
+        const pwd = passwordInput.value.trim();
+        if (pwd === CONTRASEÑA) {
+            // Contraseña correcta
+            correctionDone = true;
+            closePasswordDialog();
+            // Salir de fullscreen
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+            }
+            fullscreenActive = false;
+            // Mostrar resultados detallados
+            showDetailedResults();
+            // Mostrar botón Nueva Prueba
+            newTestArea.style.display = 'block';
+            correctionArea.style.display = 'none';
+            // Deshabilitar selección adicional
+            document.querySelectorAll('.option input[type="radio"]').forEach(r => r.disabled = true);
+        } else {
+            passwordError.style.display = 'block';
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
+    }
+
+    function showDetailedResults() {
+        let correctCount = 0;
+        let detailsHtml = '';
+        const letters = ['A', 'B', 'C', 'D', 'E'];
+
+        for (let i = 0; i < currentQuestions.length; i++) {
+            const q = currentQuestions[i];
+            const userAns = userAnswers[i];
+            const isCorrect = (userAns === q.correct);
+            if (isCorrect) correctCount++;
+            const statusIcon = isCorrect ? '✅' : '❌';
+            const userShow = (userAns !== null) ? letters[userAns] : '—';
+            const correctShow = letters[q.correct];
+            const userText = (userAns !== null) ? q.options[userAns] : 'No respondida';
+            const correctText = q.options[q.correct];
+            detailsHtml += `
+                <div class="result-item">
+                    <span style="min-width:30px;">${statusIcon}</span>
+                    <span><strong>Pregunta ${i+1}</strong> (Tu respuesta: ${userShow} — Correcta: ${correctShow})<br>
+                    <span style="font-size:0.8rem; color:#444;">${userText}</span> vs <span style="font-size:0.8rem; color:#2a8a4a;">${correctText}</span></span>
+                </div>
+            `;
+        }
+
+        const percent = Math.round((correctCount / currentQuestions.length) * 100);
+        resultsPanel.innerHTML = `
+            <h3>📊 Resultado Final</h3>
+            <div class="result-summary">🎯 Aciertos: ${correctCount} de ${currentQuestions.length} (${percent}%)</div>
+            <div class="result-detail">${detailsHtml}</div>
+            <div class="text-center mt-1">
+                <button id="closeResultsBtn" class="btn btn-secondary">✖ Cerrar resultados</button>
+            </div>
+        `;
+        resultsPanel.style.display = 'block';
+
+        document.getElementById('closeResultsBtn').addEventListener('click', () => {
+            resultsPanel.style.display = 'none';
+        });
+    }
+
+    // ========================================================================
+    //  NUEVA PRUEBA
+    // ========================================================================
+
+    function resetToWelcome() {
+        // Reiniciar estado
+        currentQuestions = [];
+        userAnswers = [];
+        currentIndex = 0;
+        quizFinished = false;
+        correctionDone = false;
+        fullscreenActive = false;
+
+        // Ocultar áreas
+        quizArea.style.display = 'none';
+        resultsPanel.style.display = 'none';
+        correctionArea.style.display = 'none';
+        newTestArea.style.display = 'none';
+        prevBtn.style.display = 'inline-flex';
+        nextBtn.style.display = 'inline-flex';
+        finishBtn.style.display = 'none';
+        prevBtn.disabled = true;
+
+        // Mostrar bienvenida
+        welcomeScreen.style.display = 'flex';
+
+        // Salir de fullscreen si está activo
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+        }
+
+        // Limpiar contenedor
+        questionContainer.innerHTML = '';
+    }
+
+    function startNewTest() {
+        resetToWelcome();
+        // Generar nuevo cuestionario
+        currentQuestions = generateRandomQuiz(NUM_PREGUNTAS);
+        userAnswers = new Array(currentQuestions.length).fill(null);
+        currentIndex = 0;
+        quizFinished = false;
+        correctionDone = false;
+
+        // Ocultar bienvenida, mostrar área de quiz
+        welcomeScreen.style.display = 'none';
+        quizArea.style.display = 'flex';
+        resultsPanel.style.display = 'none';
+        correctionArea.style.display = 'none';
+        newTestArea.style.display = 'none';
+        prevBtn.style.display = 'inline-flex';
+        nextBtn.style.display = 'inline-flex';
+        finishBtn.style.display = 'none';
+
+        renderQuestion(0);
+        liveScore.textContent = `✅ Respondidas: 0 / ${currentQuestions.length}`;
+    }
+
+    // ========================================================================
+    //  MANEJO DE FULLSCREEN Y ARRANQUE
+    // ========================================================================
+
+    function startEvaluation() {
+        // Solicitar fullscreen
+        const el = document.documentElement;
+        if (el.requestFullscreen) {
+            el.requestFullscreen().then(() => {
+                fullscreenActive = true;
+                // Iniciar prueba
+                startNewTest();
+            }).catch((err) => {
+                console.warn('Fullscreen no disponible:', err);
+                // Aún así iniciar la prueba
+                fullscreenActive = false;
+                startNewTest();
+            });
+        } else {
+            // Fallback
+            fullscreenActive = false;
+            startNewTest();
+        }
+    }
+
+    // Detectar salida de fullscreen (por si el usuario presiona ESC)
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && fullscreenActive && !correctionDone && !quizFinished) {
+            // El usuario salió manualmente, advertir
+            if (!confirm('⚠️ Has salido del modo pantalla completa. Para continuar, vuelve a activar la pantalla completa. ¿Reintentar?')) {
+                // Si no quiere, se mantiene pero quizás pierda funcionalidad
+            } else {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+        }
+    });
+
+    // ========================================================================
+    //  EVENT LISTENERS
+    // ========================================================================
+
+    startBtn.addEventListener('click', startEvaluation);
+
+    prevBtn.addEventListener('click', goToPrev);
+    nextBtn.addEventListener('click', goToNext);
+    finishBtn.addEventListener('click', finishQuiz);
+
+    correctionBtn.addEventListener('click', openPasswordDialog);
+
+    passwordConfirmBtn.addEventListener('click', checkPassword);
+    passwordCancelBtn.addEventListener('click', closePasswordDialog);
+
+    passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') checkPassword();
+        if (e.key === 'Escape') closePasswordDialog();
+    });
+
+    newTestBtn.addEventListener('click', () => {
+        if (confirm('🔄 ¿Generar una nueva prueba? Se perderán las respuestas actuales.')) {
+            startNewTest();
+        }
+    });
+
+    // Clic en overlay para cerrar (solo si no es en el cuadro)
+    passwordOverlay.addEventListener('click', (e) => {
+        if (e.target === passwordOverlay) closePasswordDialog();
+    });
+
+    // ========================================================================
+    //  INICIALIZACIÓN
+    // ========================================================================
+
+    // Generar el primer banco (pero no mostrar hasta que el usuario presione "Comenzar")
+    // Solo preparamos el estado inicial
+    welcomeScreen.style.display = 'flex';
+    quizArea.style.display = 'none';
+    resultsPanel.style.display = 'none';
+    correctionArea.style.display = 'none';
+    newTestArea.style.display = 'none';
+    prevBtn.disabled = true;
+
+    // Prevenir doble clic en botón start
+    // (todo ok)
+
+    console.log('Evaluación Técnica lista. Presiona "Comenzar Evaluación" para iniciar.');
+</script>
+
+</body>
+</html>
